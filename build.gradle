@@ -1,0 +1,54 @@
+// Top-level build file where you can add configuration options common to all sub-projects/modules.
+
+buildscript {
+    repositories {
+        google()
+        jcenter()
+        maven { url 'https://plugins.gradle.org/m2/'}
+        
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:3.3.2'
+        
+        // NOTE: Do not place your application dependencies here; they belong
+        // in the individual module build.gradle files
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        jcenter()
+        maven { url "https://jitpack.io" }
+    }
+    configurations.matching { it.name == '_internal_aapt2_binary' }.all { config ->
+        config.resolutionStrategy.eachDependency { details ->
+            details.useVersion("3.5.0-alpha03-5252756")
+        }
+    }
+}
+
+ext.versions = [:]
+versions.support_library = '28.0.0'
+versions.constraint_layout = '1.1.3'
+
+versions.lifecycle = '1.1.1'
+
+
+versions.rxandroid = '2.1.0'
+versions.rxjava = '2.2.2'
+
+
+versions.timber = '4.7.1'
+versions.easypermissions = '1.3.0'
+versions.jetbrains = '16.0.3'
+
+versions.junit = '4.12'
+versions.runner = '1.0.2'
+versions.espresso_core = '3.0.2'
+versions.gson = '2.8.5'
+versions.permission = '4.2.0'
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}
