@@ -16,10 +16,11 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+
     @Override
-    protected void onResume() {
-        super.onResume();
-        //startActivity(new Intent(this, CropActivity.class));
+    protected void onDestroy() {
+        super.onDestroy();
+        startActivity(new Intent(this, MainActivity.class));
 
     }
 }

@@ -6,6 +6,7 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.DashPathEffect;
+import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.Point;
@@ -24,6 +25,9 @@ import com.ei.lyrebirddemo.R;
 import com.ei.lyrebirddemo.model.CropModel;
 
 import java.util.ArrayList;
+import java.util.List;
+
+import timber.log.Timber;
 
 public class DrawingImageView extends android.support.v7.widget.AppCompatImageView {
     Context context;
@@ -31,6 +35,7 @@ public class DrawingImageView extends android.support.v7.widget.AppCompatImageVi
     Path clipPath;
     Bitmap bmp;
     Bitmap alteredBitmap;
+    Bitmap baseBitmap;
     Canvas canvas;
     Paint paint;
     float downx = 0;
@@ -50,6 +55,12 @@ public class DrawingImageView extends android.support.v7.widget.AppCompatImageVi
     Paint cpaint;
     Bitmap temporary_bitmap;
     private ProgressDialog pDialog;
+
+    //Draw Bitmap
+    int startX=0;
+    int startY=0;
+    int endX=0;
+    int endY=0;
 
 
     public DrawingImageView(Context context) {
@@ -87,6 +98,7 @@ public class DrawingImageView extends android.support.v7.widget.AppCompatImageVi
         int cx = (screen_width - bmp.getWidth()) >> 1;
         int cy = (screen_height - bmp.getHeight()) >> 1;
         canvas.drawBitmap(bmp, cx, cy, null);
+        baseBitmap = alteredBitmap.copy(alteredBitmap.getConfig(), true);
         setImageBitmap(alteredBitmap);
         setOnTouchListener(onTouchDraw());
     }
@@ -95,8 +107,9 @@ public class DrawingImageView extends android.support.v7.widget.AppCompatImageVi
 
         Drawable d = getResources().getDrawable(R.drawable.indir);
         bmp = ((BitmapDrawable) d).getBitmap();
-
+        //bmp=Bitmap.createBitmap(screen_width, screen_height, bmp.getConfig());
         alteredBitmap = Bitmap.createBitmap(screen_width, screen_height, bmp.getConfig());
+
         canvas = new Canvas(alteredBitmap);
         paint = new Paint();
         paint.setColor(Color.BLACK);
@@ -181,6 +194,7 @@ public class DrawingImageView extends android.support.v7.widget.AppCompatImageVi
 
     public View.OnTouchListener onTouchAfterDraw() {
 
+
         return new OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
@@ -188,8 +202,10 @@ public class DrawingImageView extends android.support.v7.widget.AppCompatImageVi
 
                 switch (action) {
                     case MotionEvent.ACTION_DOWN:
-                        downx = event.getX();
-                        downy = event.getY();
+                        Timber.d("ACTION_DOWN");
+                        startX = (int) event.getX();
+                        startY = (int) event.getY();
+                        /*
                         clipPath = new Path();
                         clipPath.moveTo(downx, downy);
                         tdownx = downx;
@@ -199,10 +215,13 @@ public class DrawingImageView extends android.support.v7.widget.AppCompatImageVi
                         largex = downx;
                         largey = downy;
                         lastTouchDown = System.currentTimeMillis();
+                        */
                         break;
 
                     case MotionEvent.ACTION_MOVE:
-
+                        endX = (int) event.getX();
+                        endY = (int) event.getY();
+                        /*
                         upx = event.getX();
                         upy = event.getY();
                         cropModelArrayList.add(new CropModel(upx, upy));
@@ -215,8 +234,13 @@ public class DrawingImageView extends android.support.v7.widget.AppCompatImageVi
                         invalidate();
                         downx = upx;
                         downy = upy;
+                        */
+                        setImageBitmap(overlay(baseBitmap,alteredBitmap));
+                        //drawCroppingBitmap(alteredBitmap);
                         break;
                     case MotionEvent.ACTION_UP:
+                        Timber.d("ACTION_Up");
+                        /*
                         if (System.currentTimeMillis() - lastTouchDown < CLICK_ACTION_THRESHHOLD) {
 
                             cropModelArrayList.clear();
@@ -241,6 +265,7 @@ public class DrawingImageView extends android.support.v7.widget.AppCompatImageVi
                             }
 
                         }
+                        */
                         break;
                     case MotionEvent.ACTION_CANCEL:
                         break;
@@ -347,7 +372,53 @@ public class DrawingImageView extends android.support.v7.widget.AppCompatImageVi
         mThread.start();
 */
 
-        setImageBitmap(alteredBitmap);
+        setImageBitmap(bmp);
+        setOnTouchListener(onTouchAfterDraw());
+    }
+
+    private void drawCroppingBitmap(Bitmap bitmap){
+        int positionLeft=0;
+        int positionTop=0;
+        Bitmap newBitmap =Bitmap.createBitmap(bmp.getWidth(),bitmap.getHeight(),Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(newBitmap);
+        canvas.drawBitmap(bmp, positionLeft, positionTop,null);
+        positionLeft=100;
+        positionTop=100;
+        canvas.drawBitmap(bitmap,positionLeft,positionTop,null);
+        setImageBitmap(newBitmap);
+    }
+
+    private Bitmap overlay(Bitmap bmp1, Bitmap bmp2) {
+        Bitmap bmOverlay = Bitmap.createBitmap(bmp1.getWidth(), bmp1.getHeight(), bmp1.getConfig());
+        Canvas canvas = new Canvas(bmOverlay);
+        canvas.drawBitmap(bmp1, 0,0, null);
+        for (int [] tmp : calculateDrawMatrix(startX,startY,endX,endY,bmp2)){
+            canvas.drawBitmap(bmp2,tmp[0] ,tmp[1], null);
+        }
+        //canvas.drawBitmap(bmp2, new Matrix(), null);
+        return bmOverlay;
+    }
+
+    public List<int[]> calculateDrawMatrix(int startX, int startY, int endX, int endY,Bitmap bitmap){
+        List<int[]> matrixList = new ArrayList<>();
+
+        /*
+        int bitmapX= bitmap.getWidth();
+        int bitmapY= bitmap.getHeight();
+        startX=startX+bitmapX;
+        startY=startY-bitmapY;
+*/
+
+        matrixList.add(new int[]{startX,startY});
+
+        int difX = -(startX-endX)/10;
+        int difY = -(startY-endY)/10;
+        for(int i = 1 ; i<11-1;i++){
+            matrixList.add(new int[]{startX+difX*i,startY+difY*i});
+        }
+
+
+        return matrixList;
     }
 
 
